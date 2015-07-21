@@ -1,6 +1,11 @@
 package org.opentripplanner.jane;
 
+import org.opentripplanner.routing.edgetype.ElevatorAlightEdge;
+import org.opentripplanner.routing.edgetype.ElevatorBoardEdge;
 import org.opentripplanner.routing.edgetype.PatternHop;
+import org.opentripplanner.routing.edgetype.SimpleTransfer;
+import org.opentripplanner.routing.edgetype.StreetEdge;
+import org.opentripplanner.routing.edgetype.StreetTransitLink;
 import org.opentripplanner.routing.graph.Edge;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -32,6 +37,16 @@ public class JaneEdge {
 		this.numOfPlaces = null;
 		if (e instanceof PatternHop) {
 			this.mode = ((PatternHop) e).getMode().name();
+		} else if (e instanceof StreetEdge) {
+			this.mode = ((StreetEdge) e).getPermission().name();
+		} else if (e instanceof SimpleTransfer) {
+			this.mode = "SIMPLE_TRANSFER";
+		} else if (e instanceof StreetTransitLink) {
+			this.mode = ((StreetTransitLink) e).getMode().name();
+		} else if (e instanceof ElevatorAlightEdge) {
+			this.mode = "ELEVATOR_ALIGHT";
+		} else if (e instanceof ElevatorBoardEdge) {
+			this.mode = "ELEVATOR_BOARD";
 		} else {
 			this.mode = "";
 		}
