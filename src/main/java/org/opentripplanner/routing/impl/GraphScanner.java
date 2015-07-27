@@ -84,6 +84,8 @@ public class GraphScanner {
                 InputStreamGraphSource graphSource = InputStreamGraphSource.newFileGraphSource(
                         routerId, getBasePath(routerId), loadLevel);
                 graphService.registerGraph(routerId, graphSource);
+                // JANE : add number of places associated with each edge
+                graphService.registerJaneEdges(routerId, getBasePath(routerId));
             }
         } else {
             LOG.info("No list of routerIds was provided for automatic registration.");

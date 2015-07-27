@@ -69,6 +69,7 @@ public class OTPApplication extends Application {
         Set<Class<?>> classes = Sets.newHashSet();
         classes.addAll(Arrays.asList(
             /* Jersey resource classes: define web services, i.e. an HTTP API. */
+        	JanePlanner.class,
             PlannerResource.class,
             IndexAPI.class,
             ExternalGeocoderResource.class,
