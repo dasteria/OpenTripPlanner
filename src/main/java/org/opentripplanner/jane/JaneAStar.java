@@ -1,6 +1,8 @@
 package org.opentripplanner.jane;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +35,8 @@ public class JaneAStar {
 
 	private boolean verbose = false;
 	private Map<Integer, JaneEdge> janeEdge;
-	private int placeIndex;
+	private Map<Integer, JanePoint> janePoint;
+	private int type;
 
 	private TraverseVisitor traverseVisitor;
 
@@ -53,7 +56,7 @@ public class JaneAStar {
 		RemainingWeightHeuristic heuristic;
 		public RoutingContext rctx;
 		public int nVisited;
-		public List<Object> targetAcceptedStates;
+		public List<State> targetAcceptedStates;
 		public RunStatus status;
 		private RoutingRequest options;
 		private SearchTerminationStrategy terminationStrategy;
@@ -64,14 +67,14 @@ public class JaneAStar {
 			this.options = options;
 			this.terminationStrategy = terminationStrategy;
 		}
-
 	}
 
 	private RunState runState;
 
-	public JaneAStar(Map<Integer, JaneEdge> janeEdge, int placeIndex) {
+	public JaneAStar(Map<Integer, JaneEdge> janeEdge, Map<Integer, JanePoint> janePoint, int type) {
 		this.janeEdge = janeEdge;
-		this.placeIndex = placeIndex;
+		this.janePoint = janePoint;
+		this.type = type;
 	}
 
 	/**
@@ -134,6 +137,7 @@ public class JaneAStar {
 
 		if (addToQueue) {
 			State initialState = new State(options);
+			initialState.places = new HashSet<Integer>();
 			runState.spt.add(initialState);
 			runState.pq.insert(initialState, 0);
 		}
@@ -182,11 +186,15 @@ public class JaneAStar {
 			// multiple trips.
 			for (State v = edge.traverse(runState.u); v != null; v = v.getNextResult()) {
 				// Could be: for (State v : traverseEdge...)
+				v.places = (HashSet<Integer>) runState.u.places.clone();
 				JaneEdge j = janeEdge.get(edge.getId());
 				if (j != null)
-					v.numOfPlaces += runState.u.numOfPlaces + j.getNumOfPlaces()[placeIndex];
-				else
-					v.numOfPlaces = runState.u.numOfPlaces;
+					for (int id : j.getPlaces()) {
+						JanePoint point = janePoint.get(id);
+						if (point != null && (point.getType() & type) != 0)
+							v.places.add(id);
+					}
+				v.numOfPlaces = v.places.size();
 				if (traverseVisitor != null) {
 					traverseVisitor.visitEdge(edge, v);
 				}
@@ -296,23 +304,22 @@ public class JaneAStar {
 				}
 				// TODO AMB: Replace isFinal with bicycle conditions in
 				// BasicPathParser
-			} else if (runState.u_vertex == runState.rctx.target && runState.u.isFinal()
-					&& runState.u.allPathParsersAccept()) {
-				runState.targetAcceptedStates.add(runState.u);
-				runState.foundPathWeight = runState.u.getWeight();
-				runState.options.rctx.debugOutput.foundPath();
-				// new GraphPath(runState.u, false).dump();
+			} else if (runState.u_vertex == runState.rctx.target)
+				if (runState.u.isFinal() && runState.u.allPathParsersAccept()) {
+					runState.targetAcceptedStates.add(runState.u);
+					runState.foundPathWeight = runState.u.getWeight();
+					runState.options.rctx.debugOutput.foundPath();
+					// new GraphPath(runState.u, false).dump();
 
-				/*
-				 * Break out of the search if we've found the requested number
-				 * of paths.
-				 */
-				if (runState.targetAcceptedStates.size() >= runState.options.numItineraries) {
-					LOG.debug("total vertices visited {}", runState.nVisited);
-					break;
+					/*
+					 * Break out of the search if we've found the requested
+					 * number of paths.
+					 */
+					if (runState.targetAcceptedStates.size() >= runState.options.numItineraries) {
+						LOG.debug("total vertices visited {}", runState.nVisited);
+						break;
+					}
 				}
-			}
-
 		}
 	}
 

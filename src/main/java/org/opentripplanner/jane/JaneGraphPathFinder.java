@@ -31,13 +31,15 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 
 	Router router;
 	Map<Integer, JaneEdge> janeEdge;
-	int placeIndex;
+	Map<Integer, JanePoint> janePoint;
+	int placeType;
 
-	public JaneGraphPathFinder(Router router, Map<Integer, JaneEdge> janeEdge, int placeIndex) {
+	public JaneGraphPathFinder(Router router, Map<Integer, JaneEdge> janeEdge, Map<Integer, JanePoint> janePoint, int placeType) {
 		super(router);
 		this.router = router;
 		this.janeEdge = janeEdge;
-		this.placeIndex = placeIndex;
+		this.janePoint = janePoint;
+		this.placeType = placeType;
 	}
 
 	public List<GraphPath> getPaths(RoutingRequest options) {
@@ -49,7 +51,7 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 
 		// Reuse one instance of AStar for all N requests, which are carried out
 		// sequentially
-		JaneAStar aStar = new JaneAStar(janeEdge, placeIndex);
+		JaneAStar aStar = new JaneAStar(janeEdge, janePoint, placeType);
 		if (options.rctx == null) {
 			options.setRoutingContext(router.graph);
 			/*
@@ -78,7 +80,7 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 
 			@Override
 			public boolean betterOrEqual(State a, State b) {
-				return (a.weight <= b.weight) && (a.numOfPlaces >= b.numOfPlaces);
+				return (a.getTimeSeconds() <= b.getTimeSeconds()) && (a.numOfPlaces >= b.numOfPlaces);
 			}
 		};
 		LOG.debug("rreq={}", options);
@@ -123,7 +125,7 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 		LOG.debug("BEGIN SEARCH");
 		List<GraphPath> paths = Lists.newArrayList();
 		// Set<AgencyAndId> bannedTrips = Sets.newHashSet();
-		while (paths.size() < options.numItineraries) {
+		while (true) { //while (paths.size() < options.numItineraries) 
 			// TODO pull all this timeout logic into a function near
 			// org.opentripplanner.util.DateUtils.absoluteTimeout()
 			int timeoutIndex = paths.size();
@@ -165,12 +167,13 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 			}
 			paths.addAll(newPaths);
 			LOG.debug("we have {} paths", paths.size());
+			break;
 		}
 		LOG.debug("END SEARCH ({} msec)", System.currentTimeMillis() - searchBeginTime);
 		Collections.sort(paths, new Comparator<GraphPath>() {
 			@Override
 			public int compare(GraphPath o1, GraphPath o2) {
-				return (int) (o2.getWeight() - o1.getWeight());
+				return (int) (o2.getEndTime() - o1.getEndTime());
 			}
 		});
 		return paths;

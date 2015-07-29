@@ -2,7 +2,6 @@ package org.opentripplanner.api.resource;
 
 import static org.opentripplanner.api.resource.ServerInfo.Q;
 
-import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +24,7 @@ import org.opentripplanner.api.model.TripPlan;
 import org.opentripplanner.api.model.error.PlannerError;
 import org.opentripplanner.jane.JaneEdge;
 import org.opentripplanner.jane.JaneGraphPathFinder;
+import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.standalone.OTPServer;
@@ -97,7 +97,8 @@ public class JanePlanner extends RoutingResource {
             /* Find some good GraphPaths through the OTP Graph. */
             
             Map<Integer, JaneEdge> janeEdge = otpServer.getGraphService().getJaneEdge(request.routerId);
-            JaneGraphPathFinder gpFinder = new JaneGraphPathFinder(router, janeEdge, getEdgeIndex()); // we could also get a persistent router-scoped GraphPathFinder but there's no setup cost here
+            Map<Integer, JanePoint> janePoint = otpServer.getGraphService().getJanePoint(request.routerId);
+            JaneGraphPathFinder gpFinder = new JaneGraphPathFinder(router, janeEdge, janePoint, getPlaceType()); // we could also get a persistent router-scoped GraphPathFinder but there's no setup cost here
             List<GraphPath> paths = gpFinder.graphPathFinderEntryPoint(request);
 
             /* Convert the internal GraphPaths to a TripPlan object that is included in an OTP web service Response. */
@@ -120,11 +121,12 @@ public class JanePlanner extends RoutingResource {
         return response;
     }
     
-    private int getEdgeIndex() {
+    private int getPlaceType() {
+    	if (category == null) return 0xFF;
     	if (category.equalsIgnoreCase("NIGHTLIFE")) return 1;
     	if (category.equalsIgnoreCase("FOOD")) return 2;
-    	if (category.equalsIgnoreCase("OTHER")) return 3;
-    	if (category.equalsIgnoreCase("SHOPPING")) return 4;
-    	return 0;
+    	if (category.equalsIgnoreCase("OTHER")) return 4;
+    	if (category.equalsIgnoreCase("SHOPPING")) return 8;
+    	return 0xFF;
     }
 }

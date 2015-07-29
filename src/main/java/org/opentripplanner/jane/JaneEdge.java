@@ -14,7 +14,8 @@ public class JaneEdge {
 	private String vertexName;
 	private int id;
 	private double[][] geometry;
-	private int[] numOfPlaces;
+	private int numOfPlaces;
+	private int[] places;
 	private String mode;
 
 	public JaneEdge() {
@@ -34,7 +35,8 @@ public class JaneEdge {
 				this.geometry[i][1] = coordinates[i].x;
 			}
 		}
-		this.numOfPlaces = null;
+		this.numOfPlaces = 0;
+		this.places = null;
 		if (e instanceof PatternHop) {
 			this.mode = ((PatternHop) e).getMode().name();
 		} else if (e instanceof StreetEdge) {
@@ -64,10 +66,14 @@ public class JaneEdge {
 		return geometry;
 	}
 
-	public int[] getNumOfPlaces() {
+	public int getNumOfPlaces() {
 		return numOfPlaces;
 	}
 
+	public int[] getPlaces() {
+		return places;
+	}
+	
 	public String getMode() {
 		return mode;
 	}
@@ -84,10 +90,14 @@ public class JaneEdge {
 		this.geometry = geometry;
 	}
 
-	public void setNumOfPlaces(int[] numOfPlaces) {
+	public void setNumOfPlaces(int numOfPlaces) {
 		this.numOfPlaces = numOfPlaces;
 	}
 
+	public void setPlaces(int[] places) {
+		this.places = places;
+	}
+	
 	public void setMode(String mode) {
 		this.mode = mode;
 	}

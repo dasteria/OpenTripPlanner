@@ -32,6 +32,7 @@ import javax.annotation.PreDestroy;
 import org.geotools.referencing.factory.DeferredAuthorityFactory;
 import org.geotools.util.WeakCollectionCleaner;
 import org.opentripplanner.jane.JaneEdge;
+import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.error.GraphNotFoundException;
 import org.opentripplanner.standalone.Router;
 import org.slf4j.Logger;
@@ -70,6 +71,7 @@ public class GraphService {
 	private Map<String, GraphSource> graphSources = new HashMap<>();
 
 	private Map<String, Map<Integer, JaneEdge>> janeEdges = new HashMap<>();
+	private Map<String, Map<Integer, JanePoint>> janePoints = new HashMap<>();
 
 	private static final Pattern routerIdPattern = Pattern.compile("[\\p{Alnum}_-]*");
 
@@ -161,6 +163,18 @@ public class GraphService {
 			throw new GraphNotFoundException();
 		}
 		return janeEdge;
+	}
+	public Map<Integer, JanePoint> getJanePoint(String routerId) {
+		if (routerId == null || routerId.isEmpty() || routerId.equalsIgnoreCase("default")) {
+			routerId = defaultRouterId;
+			LOG.debug("routerId not specified, set to default of '{}'", routerId);
+		}
+		Map<Integer, JanePoint> janePoint = janePoints.get(routerId);
+		if (janePoint == null) {
+			LOG.error("no graph registered with the routerId '{}'", routerId);
+			throw new GraphNotFoundException();
+		}
+		return janePoint;
 	}
 
 	/**
@@ -255,18 +269,30 @@ public class GraphService {
 			Map<Integer, JaneEdge> mappedObject = mapper.readValue(fop, new TypeReference<Map<Integer, JaneEdge>>() {
 			});
 			if (janeEdges.get(routerId) != null) {
-				LOG.info("Graph '{}' already registered. Nothing to do.", routerId);
+				LOG.info("Graph '{}' already has edge weights registered. Nothing to do.", routerId);
 				return false;
 			}
 			LOG.info("Adding edge quality to router '{}'", routerId);
 			janeEdges.put(routerId, mappedObject);
-			return true;
-
 		} catch (IOException e) {
-			LOG.error("IOError when reading edges in graph from router ID '{}'.", routerId);
+			LOG.error("IOError when reading edges weights for graph from router ID '{}'.", routerId);
 			return false;
 		}
-
+		try (FileInputStream fop = new FileInputStream(new File(baseFile, "points.json"))) {
+			ObjectMapper mapper = new ObjectMapper();
+			Map<Integer, JanePoint> mappedObject = mapper.readValue(fop, new TypeReference<Map<Integer, JanePoint>>() {
+			});
+			if (janePoints.get(routerId) != null) {
+				LOG.info("Graph '{}' already has geo-points registered. Nothing to do.", routerId);
+				return false;
+			}
+			LOG.info("Adding collected geo-points to router '{}'", routerId);
+			janePoints.put(routerId, mappedObject);
+			return true;
+		} catch (IOException e) {
+			LOG.error("IOError when reading geo-points for graph from router ID '{}'.", routerId);
+			return false;
+		}
 	}
 
 	/**
