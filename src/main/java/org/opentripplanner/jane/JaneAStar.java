@@ -177,11 +177,19 @@ public class JaneAStar {
 
 		runState.nVisited += 1;
 		Vertex backVertex = null;
-		if (runState.u.getBackState() != null) backVertex = runState.u.getBackState().getVertex();
+		double lat = 0, lng = 0;
+		if (runState.u.getBackState() != null) {
+			backVertex = runState.u.getBackState().getVertex();
+			lat = backVertex.getLat();
+			lng = backVertex.getLon();
+		}
 		Collection<Edge> edges = runState.u_vertex.getOutgoing();
 		for (Edge edge : edges) {
 			// filter off one degree travel back
-			if (edge.getToVertex().equals(backVertex)) continue;
+			if (backVertex != null) {
+				Vertex outgoing = edge.getToVertex();
+				if (lat == outgoing.getLat() && lng == outgoing.getLon()) continue;
+			}
 			// Iterate over traversal results. When an edge leads nowhere (as
 			// indicated by
 			// returning NULL), the iteration is over. TODO Use this to board
