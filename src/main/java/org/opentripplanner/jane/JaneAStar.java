@@ -137,7 +137,7 @@ public class JaneAStar {
 
 		if (addToQueue) {
 			State initialState = new State(options);
-			initialState.places = new HashSet<Integer>();
+			initialState.places = new HashSet<JanePoint>();
 			runState.spt.add(initialState);
 			runState.pq.insert(initialState, 0);
 		}
@@ -172,9 +172,6 @@ public class JaneAStar {
 
 		runState.u_vertex = runState.u.getVertex();
 
-		if (verbose)
-			System.out.println("   vertex " + runState.u_vertex);
-
 		runState.nVisited += 1;
 		Vertex backVertex = null;
 		double lat = 0, lng = 0;
@@ -196,18 +193,16 @@ public class JaneAStar {
 			// multiple trips.
 			for (State v = edge.traverse(runState.u); v != null; v = v.getNextResult()) {
 				// Could be: for (State v : traverseEdge...)
-				v.places = (HashSet<Integer>) runState.u.places.clone();
+				v.places = (HashSet<JanePoint>) runState.u.places.clone();
 				JaneEdge j = janeEdge.get(edge.getId());
 				if (j != null)
-					for (int id : j.getPlaces()) {
-						JanePoint point = janePoint.get(id);
-						if (point != null && (point.getType() & type) != 0)
-							v.places.add(id);
+					for (JanePoint point : j.points) {
+						if ((point.type & type) != 0)
+							v.places.add(point);
 					}
 				v.numOfPlaces = v.places.size();
-				if (traverseVisitor != null) {
-					traverseVisitor.visitEdge(edge, v);
-				}
+				
+				if (traverseVisitor != null) traverseVisitor.visitEdge(edge, v);
 				// TEST: uncomment to verify that all optimisticTraverse
 				// functions are actually
 				// admissible
@@ -241,8 +236,7 @@ public class JaneAStar {
 				if (isWorstTimeExceeded(v, runState.options)) {
 					// too much time to get here
 					if (verbose)
-						System.out
-								.println("         too much time to reach, not enqueued. time = " + v.getTimeSeconds());
+						System.out.println("         too much time to reach, not enqueued. time = " + v.getTimeSeconds());
 					continue;
 				}
 
@@ -250,14 +244,27 @@ public class JaneAStar {
 				// if it's hopeful
 				if (runState.spt.add(v)) {
 					// report to the visitor if there is one
-					if (traverseVisitor != null)
-						traverseVisitor.visitEnqueue(v);
+					if (traverseVisitor != null) traverseVisitor.visitEnqueue(v);
+					// TODO AMB: Replace isFinal with bicycle conditions in
+					// BasicPathParser
+					if (v.getVertex() == runState.rctx.target) {
+						if (runState.u.isFinal() && runState.u.allPathParsersAccept()) {
+							runState.targetAcceptedStates.add(runState.u);
+							runState.foundPathWeight = runState.u.getWeight();
+							runState.options.rctx.debugOutput.foundPath();
+							// new GraphPath(runState.u, false).dump();
 
-					runState.pq.insert(v, estimate);
+							/*
+							 * Break out of the search if we've found the requested
+							 * number of paths.
+							 */
+							if (runState.targetAcceptedStates.size() >= runState.options.numItineraries) return true;
+						}
+					}
+					else runState.pq.insert(v, estimate);
 				}
 			}
 		}
-
 		return true;
 	}
 
@@ -297,39 +304,19 @@ public class JaneAStar {
 			if (!iterate()) {
 				continue;
 			}
-
+			if (runState.targetAcceptedStates.size() >= runState.options.numItineraries) {
+				LOG.debug("total vertices visited {}", runState.nVisited);
+				break;
+			}
 			/*
 			 * Should we terminate the search?
 			 */
-			// Don't search too far past the most recently found accepted
-			// path/state
-			if (runState.foundPathWeight != null
-					&& runState.u.getWeight() > runState.foundPathWeight * OVERSEARCH_MULTIPLIER) {
-				break;
-			}
 			if (runState.terminationStrategy != null) {
 				if (runState.terminationStrategy.shouldSearchTerminate(runState.rctx.origin, runState.rctx.target,
 						runState.u, runState.spt, runState.options)) {
 					break;
 				}
-				// TODO AMB: Replace isFinal with bicycle conditions in
-				// BasicPathParser
-			} else if (runState.u_vertex == runState.rctx.target)
-				if (runState.u.isFinal() && runState.u.allPathParsersAccept()) {
-					runState.targetAcceptedStates.add(runState.u);
-					runState.foundPathWeight = runState.u.getWeight();
-					runState.options.rctx.debugOutput.foundPath();
-					// new GraphPath(runState.u, false).dump();
-
-					/*
-					 * Break out of the search if we've found the requested
-					 * number of paths.
-					 */
-					if (runState.targetAcceptedStates.size() >= runState.options.numItineraries) {
-						LOG.debug("total vertices visited {}", runState.nVisited);
-						break;
-					}
-				}
+			}
 		}
 	}
 

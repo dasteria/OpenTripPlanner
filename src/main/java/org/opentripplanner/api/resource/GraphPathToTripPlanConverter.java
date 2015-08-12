@@ -177,7 +177,7 @@ public abstract class GraphPathToTripPlanConverter {
         if (itinerary.transfers > 0 && !(states[0].getVertex() instanceof OnboardDepartVertex)) {
             itinerary.transfers--;
         }
-
+        if (lastState.places != null) itinerary.pois.addAll(lastState.places);
         return itinerary;
     }
 

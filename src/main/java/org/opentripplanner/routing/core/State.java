@@ -21,6 +21,7 @@ import java.util.Set;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Stop;
 import org.onebusaway.gtfs.model.Trip;
+import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.algorithm.NegativeWeightException;
 import org.opentripplanner.routing.automata.AutomatonState;
 import org.opentripplanner.routing.edgetype.OnboardEdge;
@@ -44,7 +45,7 @@ public class State implements Cloneable {
     // accumulated weight up to this state
     public double weight;
     public int numOfPlaces;
-    public HashSet<Integer> places;
+    public HashSet<JanePoint> places;
     // associate this state with a vertex in the graph
     protected Vertex vertex;
 
@@ -494,6 +495,8 @@ public class State implements Cloneable {
         newState.stateData.usingRentedBike = stateData.usingRentedBike;
         newState.stateData.carParked = stateData.carParked;
         newState.stateData.bikeParked = stateData.bikeParked;
+        newState.numOfPlaces = numOfPlaces;
+        newState.places = places;
         return newState;
     }
 

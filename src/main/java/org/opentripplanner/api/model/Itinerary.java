@@ -22,7 +22,10 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 
 import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
+import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.core.Fare;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * An Itinerary is one complete way of getting from the start location to the end location.
@@ -96,6 +99,10 @@ public class Itinerary {
     @XmlElementWrapper(name = "legs")
     @XmlElement(name = "leg")
     public List<Leg> legs = new ArrayList<Leg>();
+    
+    @XmlElementWrapper(name = "intermediatePlaces")
+    @JsonProperty(value="intermediatePlaces")
+    public List<JanePoint> pois = new ArrayList<>();
 
     /**
      * This itinerary has a greater slope than the user requested (but there are no possible 

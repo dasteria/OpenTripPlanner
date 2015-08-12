@@ -1,33 +1,29 @@
 package org.opentripplanner.jane;
 
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAccessType;
+
+@XmlAccessorType(XmlAccessType.NONE)
 public class JanePoint {
 	private int id;
 	private double x;
 	private double y;
-	private float score;
-	private int type;
+	public float score;
+	public int type;
 
 	public JanePoint() {
 	}
-
+    
 	public int getId() {
 		return id;
 	}
-
+    
 	public double getX() {
 		return x;
 	}
-
+    
 	public double getY() {
 		return y;
-	}
-	
-	public float getScore() {
-		return score;
-	}
-
-	public int getType() {
-		return type;
 	}
 
 	public void setId(int id) {

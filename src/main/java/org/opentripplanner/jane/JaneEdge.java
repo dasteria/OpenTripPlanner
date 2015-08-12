@@ -17,6 +17,8 @@ public class JaneEdge {
 	private int numOfPlaces;
 	private int[] places;
 	private String mode;
+	
+	public transient JanePoint[] points;
 
 	public JaneEdge() {
 	}

@@ -288,6 +288,15 @@ public class GraphService {
 			}
 			LOG.info("Adding collected geo-points to router '{}'", routerId);
 			janePoints.put(routerId, mappedObject);
+			LOG.info("Adding collected geo-points to edges in router '{}'", routerId);
+			for (JaneEdge e : janeEdges.get(routerId).values()) {
+				ArrayList<JanePoint> points = new ArrayList<>();
+				for (int i : e.getPlaces()) {
+					if (mappedObject.containsKey(i)) points.add(mappedObject.get(i));
+				}
+				e.points = points.toArray(new JanePoint[0]);
+				e.setPlaces(null);
+			}
 			return true;
 		} catch (IOException e) {
 			LOG.error("IOError when reading geo-points for graph from router ID '{}'.", routerId);
