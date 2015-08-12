@@ -44,7 +44,7 @@ public class State implements Cloneable {
 
     // accumulated weight up to this state
     public double weight;
-    public int numOfPlaces;
+    public double quality = 0;
     public HashSet<JanePoint> places;
     // associate this state with a vertex in the graph
     protected Vertex vertex;
@@ -495,7 +495,7 @@ public class State implements Cloneable {
         newState.stateData.usingRentedBike = stateData.usingRentedBike;
         newState.stateData.carParked = stateData.carParked;
         newState.stateData.bikeParked = stateData.bikeParked;
-        newState.numOfPlaces = numOfPlaces;
+        newState.quality = quality;
         newState.places = places;
         return newState;
     }

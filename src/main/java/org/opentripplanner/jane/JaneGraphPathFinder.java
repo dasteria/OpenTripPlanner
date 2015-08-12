@@ -80,7 +80,7 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 
 			@Override
 			public boolean betterOrEqual(State a, State b) {
-				return (a.getTimeSeconds() <= b.getTimeSeconds()) && (a.numOfPlaces >= b.numOfPlaces);
+				return (a.getTimeSeconds() <= b.getTimeSeconds()) && (a.quality >= b.quality);
 			}
 		};
 		LOG.debug("rreq={}", options);

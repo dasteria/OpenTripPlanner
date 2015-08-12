@@ -46,7 +46,7 @@ public class JanePlanner extends RoutingResource {
     protected String toTime;
     
     @QueryParam("category")
-    protected String category;
+    protected int category;
     
     @QueryParam("depth")
     protected int depth;
@@ -122,11 +122,6 @@ public class JanePlanner extends RoutingResource {
     }
     
     private int getPlaceType() {
-    	if (category == null) return 0xFF;
-    	if (category.equalsIgnoreCase("NIGHTLIFE")) return 1;
-    	if (category.equalsIgnoreCase("FOOD")) return 2;
-    	if (category.equalsIgnoreCase("OTHER")) return 4;
-    	if (category.equalsIgnoreCase("SHOPPING")) return 8;
-    	return 0xFF;
+    	return category;
     }
 }
