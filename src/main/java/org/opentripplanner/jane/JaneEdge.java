@@ -1,5 +1,7 @@
 package org.opentripplanner.jane;
 
+import java.util.Set;
+
 import org.opentripplanner.routing.edgetype.ElevatorAlightEdge;
 import org.opentripplanner.routing.edgetype.ElevatorBoardEdge;
 import org.opentripplanner.routing.edgetype.PatternHop;
@@ -18,7 +20,7 @@ public class JaneEdge {
 	private int[] places;
 	private String mode;
 	
-	public transient JanePoint[] points;
+	public transient Set<JanePoint> points;
 
 	public JaneEdge() {
 	}

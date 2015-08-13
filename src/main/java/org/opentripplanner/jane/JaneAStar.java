@@ -26,6 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.beust.jcommander.internal.Lists;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Sets;
 
 public class JaneAStar {
 	private static final Logger LOG = LoggerFactory.getLogger(JaneAStar.class);
@@ -38,6 +41,7 @@ public class JaneAStar {
 	private Map<Integer, JaneEdge> janeEdge;
 	private Map<Integer, JanePoint> janePoint;
 	private int type;
+	private Predicate<JanePoint> predicate;
 
 	private TraverseVisitor traverseVisitor;
 
@@ -76,6 +80,12 @@ public class JaneAStar {
 		this.janeEdge = janeEdge;
 		this.janePoint = janePoint;
 		this.type = type;
+		this.predicate = new Predicate<JanePoint>() {
+			@Override
+			public boolean apply(JanePoint p) {
+				return (p.type & JaneAStar.this.type) == JaneAStar.this.type;
+			}
+		};
 	}
 
 	/**
@@ -138,7 +148,7 @@ public class JaneAStar {
 
 		if (addToQueue) {
 			State initialState = new State(options);
-			initialState.places = new HashSet<JanePoint>();
+			initialState.places = Sets.newIdentityHashSet();
 			runState.spt.add(initialState);
 			runState.pq.insert(initialState, 0);
 		}
@@ -163,16 +173,16 @@ public class JaneAStar {
                 	// Disable back track the original location
                 	continue;
                 }
-				v.places = (HashSet<JanePoint>) runState.u.places.clone();
 				v.quality = runState.u.quality;
 				JaneEdge j = janeEdge.get(edge.getId());
 				if (j != null) {
-					for (JanePoint point : j.points) {
-						if ((point.type & type) == type && !v.places.contains(point)) {
-							v.quality += point.score;
-							v.places.add(point);
-						}
+					v.places = Sets.difference(Sets.filter(j.points, this.predicate), runState.u.places);
+					for (JanePoint point : v.places) {
+						v.quality += point.score;
 					}
+					v.places = Sets.union(runState.u.places, v.places);
+				} else {
+					v.places = runState.u.places;
 				}
                 // TEST: uncomment to verify that all optimisticTraverse functions are actually
                 // admissible

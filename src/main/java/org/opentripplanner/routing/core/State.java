@@ -15,7 +15,6 @@ package org.opentripplanner.routing.core;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
@@ -45,7 +44,7 @@ public class State implements Cloneable {
     // accumulated weight up to this state
     public double weight;
     public double quality = 0;
-    public HashSet<JanePoint> places;
+    public Set<JanePoint> places;
     // associate this state with a vertex in the graph
     protected Vertex vertex;
 

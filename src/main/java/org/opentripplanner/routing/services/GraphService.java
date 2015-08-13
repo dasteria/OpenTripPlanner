@@ -40,6 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
  * A GraphService maps RouterIds to Graphs.
@@ -290,11 +292,10 @@ public class GraphService {
 			janePoints.put(routerId, mappedObject);
 			LOG.info("Adding collected geo-points to edges in router '{}'", routerId);
 			for (JaneEdge e : janeEdges.get(routerId).values()) {
-				ArrayList<JanePoint> points = new ArrayList<>();
+				e.points = Sets.newIdentityHashSet();
 				for (int i : e.getPlaces()) {
-					if (mappedObject.containsKey(i)) points.add(mappedObject.get(i));
+					if (mappedObject.containsKey(i)) e.points.add(mappedObject.get(i));
 				}
-				e.points = points.toArray(new JanePoint[0]);
 				e.setPlaces(null);
 			}
 			return true;
