@@ -148,10 +148,8 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 				LOG.warn("SPT was null."); // unknown failure
 				return null;
 			}
-			if (options.rctx.aborted) {
-				break; // search timed out or was gracefully aborted for some
-						// other reason.
-			}
+			// if (options.rctx.aborted) break; // search timed out or was gracefully aborted for some other reason.
+			// No matter search timed out or not still try to get some paths.
 			List<GraphPath> newPaths = spt.getPaths();
 			if (newPaths.isEmpty()) {
 				break;
