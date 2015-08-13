@@ -150,7 +150,8 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 			}
 			// if (options.rctx.aborted) break; // search timed out or was gracefully aborted for some other reason.
 			// No matter search timed out or not still try to get some paths.
-			List<GraphPath> newPaths = spt.getPaths();
+			// Turn off any route optimization optimization
+			List<GraphPath> newPaths = spt.getPaths(options.getRoutingContext().target, false);
 			if (newPaths.isEmpty()) {
 				break;
 			}
