@@ -16,6 +16,7 @@ import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
+import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -165,14 +166,18 @@ public class JaneAStar {
         for (Edge edge : edges) {
 			Vertex outgoing = edge.getToVertex();
             // TODO Use this to board multiple trips.
+            if ((edge instanceof StreetEdge) && lat == outgoing.getLat() && lng == outgoing.getLon()) {
+            	// Disable back track the original location
+            	continue;
+            }
             for (State v = edge.traverse(runState.u); v != null; v = v.getNextResult()) {
                 if (traverseVisitor != null) {
                     traverseVisitor.visitEdge(edge, v);
                 }
-                if (v.getBackMode() == TraverseMode.WALK && lat == outgoing.getLat() && lng == outgoing.getLon()) {
+                //if (v.getBackMode() == TraverseMode.WALK && lat == outgoing.getLat() && lng == outgoing.getLon()) {
                 	// Disable back track the original location
-                	continue;
-                }
+                //	continue;
+                //}
 				v.quality = runState.u.quality;
 				JaneEdge j = janeEdge.get(edge.getId());
 				if (j != null) {
