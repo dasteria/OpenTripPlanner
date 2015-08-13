@@ -15,6 +15,7 @@ import org.opentripplanner.routing.algorithm.strategies.TrivialRemainingWeightHe
 import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -152,15 +153,15 @@ public class JaneAStar {
 		}
         Collection<Edge> edges = runState.options.arriveBy ? runState.u_vertex.getIncoming() : runState.u_vertex.getOutgoing();
         for (Edge edge : edges) {
-			// Disable back track the original location, this will disable transit, WHY?
 			Vertex outgoing = edge.getToVertex();
-			if (lat == outgoing.getLat() && lng == outgoing.getLon()) continue;
-			//
-            // Iterate over traversal results. When an edge leads nowhere (as indicated by
-            // returning NULL), the iteration is over. TODO Use this to board multiple trips.
+            // TODO Use this to board multiple trips.
             for (State v = edge.traverse(runState.u); v != null; v = v.getNextResult()) {
                 if (traverseVisitor != null) {
                     traverseVisitor.visitEdge(edge, v);
+                }
+                if (v.getBackMode() == TraverseMode.WALK && lat == outgoing.getLat() && lng == outgoing.getLon()) {
+                	// Disable back track the original location
+                	continue;
                 }
 				v.places = (HashSet<JanePoint>) runState.u.places.clone();
 				v.quality = runState.u.quality;
@@ -209,11 +210,13 @@ public class JaneAStar {
                 }
                 
                 // spt.add returns true if the state is hopeful; enqueue state if it's hopeful
+                // After optimization, a trip includes transit will have a different total travel time.
+                // Therefore, we will miss a potentially shorter route, when v is a target state here.
                 if (runState.spt.add(v)) {
                     // report to the visitor if there is one
-                    if (traverseVisitor != null)
+                    if (traverseVisitor != null) {
                         traverseVisitor.visitEnqueue(v);
-                    
+                    }
                     runState.pq.insert(v, estimate);
                 } 
             }
@@ -235,12 +238,6 @@ public class JaneAStar {
                 runState.options.rctx.debugOutput.timedOut = true; // signal timeout in debug output object
 
                 break;
-            }
-            
-            // print debug info
-            if (verbose) {
-                double w = runState.pq.peek_min_key();
-                System.out.println("pq min key = " + w);
             }
             
             // interleave some heuristic-improving work (single threaded)
@@ -266,29 +263,20 @@ public class JaneAStar {
             
             // TODO AMB: Replace isFinal with bicycle conditions in BasicPathParser
             if (runState.u_vertex == runState.rctx.target && runState.u.isFinal() && runState.u.allPathParsersAccept()) {
-                runState.targetAcceptedStates.add(runState.u);
                 runState.foundPathWeight = runState.u.getWeight();
                 runState.options.rctx.debugOutput.foundPath();
-                //new GraphPath(runState.u, false).dump();
-                /* Only find one path at a time in long distance mode. */
-                if (runState.options.longDistance) break;
                 /* Break out of the search if we've found the requested number of paths. */
-                if (runState.targetAcceptedStates.size() >= runState.options.getNumItineraries()) {
+                if (runState.spt.getStates(runState.rctx.target).size() >= runState.options.numItineraries) {
                     LOG.debug("total vertices visited {}", runState.nVisited);
                     break;
                 }
             }
             
             iterate();
-            
+
             /*
              * Should we terminate the search?
              */
-            // Don't search too far past the most recently found accepted path/state
-            if (runState.foundPathWeight != null &&
-                runState.u.getWeight() > runState.foundPathWeight * OVERSEARCH_MULTIPLIER ) {
-                break;
-            }
             if (runState.terminationStrategy != null) {
                 if (runState.terminationStrategy.shouldSearchTerminate(
                     runState.rctx.origin, runState.rctx.target, runState.u, runState.spt, runState.options)) {
