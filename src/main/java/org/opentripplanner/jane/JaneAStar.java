@@ -84,7 +84,7 @@ public class JaneAStar {
 		this.predicate = new Predicate<JanePoint>() {
 			@Override
 			public boolean apply(JanePoint p) {
-				return (p.type & JaneAStar.this.type) == JaneAStar.this.type;
+				return (p.type & JaneAStar.this.type) != 0;
 			}
 		};
 	}
