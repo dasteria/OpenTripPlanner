@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.api.resource.GraphPathToTripPlanConverter;
@@ -17,6 +18,7 @@ import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.error.PathNotFoundException;
 import org.opentripplanner.routing.error.VertexNotFoundException;
+import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.impl.GraphPathFinder;
 import org.opentripplanner.routing.pathparser.PathParser;
 import org.opentripplanner.routing.spt.DominanceFunction;
@@ -28,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public class AndroidGraphPathFinder {
 	private static final Logger LOG = LoggerFactory.getLogger(AndroidGraphPathFinder.class);
@@ -35,55 +38,52 @@ public class AndroidGraphPathFinder {
 	private static final double CLAMP_MAX_WALK = 15000;
 
 	Router router;
-	Map<Integer, JaneEdge> janeEdge;
-	Map<Integer, JanePoint> janePoint;
-	int placeType;
+	int[] placeTypes;
 
-	public AndroidGraphPathFinder(Router router, Map<Integer, JaneEdge> janeEdge, Map<Integer, JanePoint> janePoint) {
+	public AndroidGraphPathFinder(Router router) {
 		this.router = router;
-		this.janeEdge = janeEdge;
-		this.janePoint = janePoint;
 	}
 
 	/* Try to find N paths through the Graph */
-	public void getOneHopPath(AndroidResponse response, RoutingRequest request, int stayTime, int[] categories) {
+	public void getOneHopPath(AndroidResponse response, RoutingRequest request, int stayTime, int[] fromCategory, int[] toCategory) {
 
 		// We used to perform a protective clone of the RoutingRequest here.
 		// There is no reason to do this if we don't modify the request.
 		// Any code that changes them should be performing the copy!
 		Iterator<GraphPath> gpi = null;
+		Set<Vertex> visited = null;
+		List<GraphPath> pathsOne = null, pathsTwo = null;
+		Map<JaneWayPoint, Long> fromWayPoints = null, toWayPoints = null;
+
 		long endTime = request.worstTime;
 		GenericLocation to = request.to;
-		List<GraphPath> paths = null;
-		this.placeType = categories[0];
+		this.placeTypes = fromCategory;
 		request.to = request.intermediatePlaces.get(0);
 		try {
-			paths = getPaths(request);
-			if (paths == null && request.wheelchairAccessible) {
+			pathsOne = getPaths(request);
+			if (pathsOne == null && request.wheelchairAccessible) {
 				// There are no paths that meet the user's slope restrictions.
-				// Try again without slope restrictions, and warn the user in
-				// the response.
+				// Try again without slope restrictions, and warn the user in the response.
 				RoutingRequest relaxedRequest = request.clone();
 				relaxedRequest.maxSlope = Double.MAX_VALUE;
 				request.rctx.slopeRestrictionRemoved = true;
-				paths = getPaths(request);
+				pathsOne = getPaths(request);
 			}
 		} catch (VertexNotFoundException e) {
 			LOG.info("Vertex not found: " + request.from + " : " + request.to);
 			throw e;
 		}
 
-		if (paths == null || paths.size() == 0) {
+		if (pathsOne == null || pathsOne.size() == 0) {
 			LOG.debug("Path not found: " + request.from + " : " + request.to);
 			request.rctx.debugOutput.finishedRendering(); // make sure we still report full search time
 			throw new PathNotFoundException();
 		}
 
 		/*
-		 * Detect and report that most obnoxious of bugs: path reversal
-		 * asymmetry.
+		 * Detect and report that most obnoxious of bugs: path reversal asymmetry.
 		 */
-		gpi = paths.iterator();
+		gpi = pathsOne.iterator();
 		while (gpi.hasNext()) {
 			GraphPath graphPath = gpi.next();
 			// TODO check, is it possible that arriveBy and time are modified in-place by the search?
@@ -99,9 +99,10 @@ public class AndroidGraphPathFinder {
 				}
 			}
 		}
-		response.setFromPlan(GraphPathToTripPlanConverter.generatePlan(paths, request));
-		Map<JaneWayPoint, Long> fromWayPoints = Maps.newHashMap();
-		for (GraphPath path : paths) {
+		response.setFromPlan(GraphPathToTripPlanConverter.generatePlan(pathsOne, request));
+		fromWayPoints = Maps.newHashMap();
+		//visited = Sets.newIdentityHashSet();
+		for (GraphPath path : pathsOne) {
 			for (State state : path.states) {
 				JaneWayPoint temp = new JaneWayPoint(state.getVertex().getLat(), state.getVertex().getLon(),
 						state.getTimeSeconds());
@@ -111,21 +112,19 @@ public class AndroidGraphPathFinder {
 			}
 		}
 		response.setFromWayPoints(fromWayPoints.keySet());
-		// next half
 
-		List<GraphPath> pathsTwo = null;
-		this.placeType = categories[1];
+		// next half
+		this.placeTypes = toCategory;
 		request.from = request.intermediatePlaces.get(0);
 		request.to = to;
 		request.worstTime = endTime;
-		request.dateTime = paths.get(0).getEndTime() + stayTime;
+		request.dateTime = pathsOne.get(0).getEndTime() + stayTime;
 		request.rctx = null;
 		try {
 			pathsTwo = getPaths(request);
 			if (pathsTwo == null && request.wheelchairAccessible) {
 				// There are no paths that meet the user's slope restrictions.
-				// Try again without slope restrictions, and warn the user in
-				// the response.
+				// Try again without slope restrictions, and warn the user in the response.
 				RoutingRequest relaxedRequest = request.clone();
 				relaxedRequest.maxSlope = Double.MAX_VALUE;
 				request.rctx.slopeRestrictionRemoved = true;
@@ -140,15 +139,12 @@ public class AndroidGraphPathFinder {
 
 		if (pathsTwo == null || pathsTwo.size() == 0) {
 			LOG.debug("Path not found: " + request.from + " : " + request.to);
-			request.rctx.debugOutput.finishedRendering(); // make sure we still
-															// report full
-															// search time
+			request.rctx.debugOutput.finishedRendering(); // make sure we still report full search time
 			throw new PathNotFoundException();
 		}
 
 		/*
-		 * Detect and report that most obnoxious of bugs: path reversal
-		 * asymmetry.
+		 * Detect and report that most obnoxious of bugs: path reversal asymmetry.
 		 */
 		gpi = pathsTwo.iterator();
 		while (gpi.hasNext()) {
@@ -168,7 +164,7 @@ public class AndroidGraphPathFinder {
 			}
 		}
 		response.setToPlan(GraphPathToTripPlanConverter.generatePlan(pathsTwo, request));
-		Map<JaneWayPoint, Long> toWayPoints = Maps.newHashMap();
+		toWayPoints = Maps.newHashMap();
 		for (GraphPath path : pathsTwo) {
 			for (State state : path.states) {
 				JaneWayPoint temp = new JaneWayPoint(state.getVertex().getLat(), state.getVertex().getLon(),
@@ -181,20 +177,16 @@ public class AndroidGraphPathFinder {
 		response.setToWayPoints(toWayPoints.keySet());
 	}
 
-	public List<GraphPath> getPaths(RoutingRequest options) {
-
-		if (options == null) {
-			LOG.error("PathService was passed a null routing request.");
-			return null;
-		}
-
-		// Reuse one instance of AStar for all N requests, which are carried out sequentially
-		JaneAStar aStar = new JaneAStar(janeEdge, janePoint, placeType);
+	private List<GraphPath> getPaths(RoutingRequest options) {
+		return this.getPaths(options, null);
+	}
+	
+	private List<GraphPath> getPaths(RoutingRequest options, Set<Vertex> visited) {
+		JaneAStar aStar = new JaneAStar(this.placeTypes);
 		if (options.rctx == null) {
 			options.setRoutingContext(router.graph);
 			/*
-			 * Use a pathparser that constrains the search to use
-			 * SimpleTransfers.
+			 * Use a pathparser that constrains the search to use SimpleTransfers.
 			 */
 			options.rctx.pathParsers = new PathParser[] { new GraphPathFinder.Parser() };
 		}
@@ -274,22 +266,12 @@ public class AndroidGraphPathFinder {
 			LOG.warn("SPT was null."); // unknown failure
 			return null;
 		}
-		// if (options.rctx.aborted) break; // search timed out or was
-		// gracefully aborted for some other reason.
+
 		// No matter search timed out or not still try to get some paths.
 		// Turn off any route optimization optimization
 		List<GraphPath> newPaths = spt.getPaths(options.getRoutingContext().target, false);
 		if (newPaths.isEmpty()) {
 			return paths;
-		}
-		// Find all trips used in this path and ban them for the remaining
-		// searches
-		for (GraphPath path : newPaths) {
-			for (State state : path.states) {
-				AgencyAndId tripId = state.getTripId();
-				if (tripId != null)
-					options.banTrip(tripId);
-			}
 		}
 		paths.addAll(newPaths);
 		LOG.debug("we have {} paths", paths.size());

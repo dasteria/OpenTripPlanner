@@ -44,6 +44,10 @@ public class PartialStreetEdge extends StreetWithElevationEdge {
         super(v1, v2, geometry, name, length, parentEdge.getPermission(), false);
         setCarSpeed(parentEdge.getCarSpeed());
         this.parentEdge = parentEdge;
+        if (this.getQuality() == null) {
+        	this.setQuality(this.parentEdge.getQuality());
+        	this.setQuantity(this.parentEdge.getQuantity());
+        }
     }
     
 

@@ -1,7 +1,5 @@
 package org.opentripplanner.jane;
 
-import java.util.Set;
-
 import org.opentripplanner.routing.edgetype.ElevatorAlightEdge;
 import org.opentripplanner.routing.edgetype.ElevatorBoardEdge;
 import org.opentripplanner.routing.edgetype.PatternHop;
@@ -16,11 +14,10 @@ public class JaneEdge {
 	private String vertexName;
 	private int id;
 	private double[][] geometry;
-	private int numOfPlaces;
+	private int[] quantity;
+	private double[] quality;
 	private int[] places;
 	private String mode;
-	
-	public transient Set<JanePoint> points;
 
 	public JaneEdge() {
 	}
@@ -39,7 +36,6 @@ public class JaneEdge {
 				this.geometry[i][1] = coordinates[i].x;
 			}
 		}
-		this.numOfPlaces = 0;
 		this.places = null;
 		if (e instanceof PatternHop) {
 			this.mode = ((PatternHop) e).getMode().name();
@@ -70,10 +66,14 @@ public class JaneEdge {
 		return geometry;
 	}
 
-	public int getNumOfPlaces() {
-		return numOfPlaces;
+	public int[] getQuantity() {
+		return quantity;
 	}
 
+	public double[] getQuality() {
+		return quality;
+	}
+	
 	public int[] getPlaces() {
 		return places;
 	}
@@ -94,10 +94,14 @@ public class JaneEdge {
 		this.geometry = geometry;
 	}
 
-	public void setNumOfPlaces(int numOfPlaces) {
-		this.numOfPlaces = numOfPlaces;
+	public void setQuantity(int[] quantity) {
+		this.quantity = quantity;
 	}
 
+	public void setQuality(double[] quality) {
+		this.quality = quality;
+	}
+	
 	public void setPlaces(int[] places) {
 		this.places = places;
 	}

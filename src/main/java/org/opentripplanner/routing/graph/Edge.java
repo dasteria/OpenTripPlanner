@@ -47,7 +47,8 @@ public abstract class Edge implements Serializable {
      * Identifier of the edge. Negative means not set.
      */
     private int id;
-
+    private double[] quality = null;
+    private int[] quantity = null;
     protected Vertex fromv;
 
     protected Vertex tov;
@@ -280,5 +281,16 @@ public abstract class Edge implements Serializable {
     public int getId(){
     	return this.id;
     }
-
+    public int[] getQuantity(){
+    	return this.quantity;
+    }
+    public double[] getQuality(){
+    	return this.quality;
+    }
+    public void setQuantity(int[] quantity){
+    	this.quantity = quantity;
+    }
+    public void setQuality(double[] quality){
+    	this.quality = quality;
+    }
 }

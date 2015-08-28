@@ -3,8 +3,8 @@ package org.opentripplanner.api.resource;
 import static org.opentripplanner.api.resource.ServerInfo.Q;
 
 import java.util.GregorianCalendar;
-import java.util.List;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.ws.rs.GET;
@@ -20,15 +20,11 @@ import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.opentripplanner.api.common.RoutingResource;
-import org.opentripplanner.api.model.TripPlan;
 import org.opentripplanner.api.model.error.PlannerError;
 import org.opentripplanner.common.model.GenericLocation;
 import org.opentripplanner.jane.AndroidGraphPathFinder;
 import org.opentripplanner.jane.AndroidResponse;
-import org.opentripplanner.jane.JaneEdge;
-import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.core.RoutingRequest;
-import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.standalone.OTPServer;
 import org.opentripplanner.standalone.Router;
 import org.opentripplanner.util.DateUtils;
@@ -41,7 +37,6 @@ public class AndroidPlanner extends RoutingResource {
     
     /** The intermediate location */
     public GenericLocation intermediate = null;
-    public int[] categories = null;
     
     /** The date that the trip should arrive. */
     @QueryParam("toDate")
@@ -55,9 +50,11 @@ public class AndroidPlanner extends RoutingResource {
     @QueryParam("stayTime")
     protected int stayTime;
     
-    @QueryParam("category")
-    protected String category;
-    
+    @QueryParam("fromCategory")
+    protected Set<Integer> fromCategory;
+    @QueryParam("toCategory")
+    protected Set<Integer> toCategory;
+
     @QueryParam("depth")
     protected int depth;
 
@@ -80,11 +77,9 @@ public class AndroidPlanner extends RoutingResource {
     	AndroidResponse response = new AndroidResponse(uriInfo);
         RoutingRequest request = null;
         try {
-
             /* Fill in request fields from query parameters via shared superclass method, catching any errors. */
             request = super.buildRequest();
             //initialize data not included in Routing request
-            this.categories = getCategories(this.category);
             Router router = otpServer.getRouter(request.routerId);
             
             TimeZone tz = router.graph.getTimeZone();
@@ -107,12 +102,8 @@ public class AndroidPlanner extends RoutingResource {
             }
             request.numItineraries = depth>0? depth : request.numItineraries; 
             /* Find some good GraphPaths through the OTP Graph. */
-            
-            Map<Integer, JaneEdge> janeEdge = otpServer.getGraphService().getJaneEdge(request.routerId);
-            Map<Integer, JanePoint> janePoint = otpServer.getGraphService().getJanePoint(request.routerId);
-            AndroidGraphPathFinder gpFinder = new AndroidGraphPathFinder(router, janeEdge, janePoint); // we could also get a persistent router-scoped GraphPathFinder but there's no setup cost here
-            gpFinder.getOneHopPath(response, request, this.stayTime, this.categories);
-
+            AndroidGraphPathFinder gpFinder = new AndroidGraphPathFinder(router); // we could also get a persistent router-scoped GraphPathFinder but there's no setup cost here
+            gpFinder.getOneHopPath(response, request, this.stayTime, getPlaceType(this.fromCategory), getPlaceType(this.toCategory));
         } catch (Exception e) {
             PlannerError error = new PlannerError(e);
             if(!PlannerError.isPlanningError(e.getClass()))
@@ -128,17 +119,18 @@ public class AndroidPlanner extends RoutingResource {
         }
         return response;
     }
-
-    private int[] getCategories(String categories) {
-    	int[] result = {0xFFFFFFFF, 0xFFFFFFFF};
-    	if (categories == null) return result;
-    	String[] data = categories.split(",");
-    	for (int i=0; i<data.length && i<2; ++i) {
-    		try{
-    			result[i] = Integer.parseInt(data[i]);
-    		} catch (NumberFormatException e) {
-    		}
+    
+    private int[] getPlaceType(Set<Integer> category) {
+    	int[] type = null;
+    	Iterator<Integer> it = category.iterator();
+    	while (it.hasNext()) {
+    		if (it.next() > 6) it.remove();
     	}
-    	return result;
+    	it = category.iterator();
+    	type = new int[category.size()];
+    	for (int i=0; i<type.length; ++i) {
+    		type[i] = it.next();
+    	}
+    	return type;
     }
 }

@@ -3,7 +3,6 @@ package org.opentripplanner.jane;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.routing.algorithm.strategies.EuclideanRemainingWeightHeuristic;
@@ -13,7 +12,6 @@ import org.opentripplanner.routing.algorithm.strategies.TrivialRemainingWeightHe
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.impl.GraphPathFinder;
-import org.opentripplanner.routing.impl.PathWeightComparator;
 import org.opentripplanner.routing.pathparser.PathParser;
 import org.opentripplanner.routing.spt.DominanceFunction;
 import org.opentripplanner.routing.spt.GraphPath;
@@ -30,15 +28,11 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 	private static final double CLAMP_MAX_WALK = 15000;
 
 	Router router;
-	Map<Integer, JaneEdge> janeEdge;
-	Map<Integer, JanePoint> janePoint;
-	int placeType;
+	int[] placeType;
 
-	public JaneGraphPathFinder(Router router, Map<Integer, JaneEdge> janeEdge, Map<Integer, JanePoint> janePoint, int placeType) {
+	public JaneGraphPathFinder(Router router, int[] placeType) {
 		super(router);
 		this.router = router;
-		this.janeEdge = janeEdge;
-		this.janePoint = janePoint;
 		this.placeType = placeType;
 	}
 
@@ -51,7 +45,7 @@ public class JaneGraphPathFinder extends GraphPathFinder {
 
 		// Reuse one instance of AStar for all N requests, which are carried out
 		// sequentially
-		JaneAStar aStar = new JaneAStar(janeEdge, janePoint, placeType);
+		JaneAStar aStar = new JaneAStar(placeType);
 		if (options.rctx == null) {
 			options.setRoutingContext(router.graph);
 			/*

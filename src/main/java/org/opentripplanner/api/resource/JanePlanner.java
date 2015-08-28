@@ -3,8 +3,9 @@ package org.opentripplanner.api.resource;
 import static org.opentripplanner.api.resource.ServerInfo.Q;
 
 import java.util.GregorianCalendar;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.ws.rs.GET;
@@ -22,9 +23,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
 import org.opentripplanner.api.common.RoutingResource;
 import org.opentripplanner.api.model.TripPlan;
 import org.opentripplanner.api.model.error.PlannerError;
-import org.opentripplanner.jane.JaneEdge;
 import org.opentripplanner.jane.JaneGraphPathFinder;
-import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.standalone.OTPServer;
@@ -46,7 +45,7 @@ public class JanePlanner extends RoutingResource {
     protected String toTime;
     
     @QueryParam("category")
-    protected int category;
+    protected Set<Integer> category;
     
     @QueryParam("depth")
     protected int depth;
@@ -96,9 +95,7 @@ public class JanePlanner extends RoutingResource {
             request.numItineraries = depth>0? depth : request.numItineraries; 
             /* Find some good GraphPaths through the OTP Graph. */
             
-            Map<Integer, JaneEdge> janeEdge = otpServer.getGraphService().getJaneEdge(request.routerId);
-            Map<Integer, JanePoint> janePoint = otpServer.getGraphService().getJanePoint(request.routerId);
-            JaneGraphPathFinder gpFinder = new JaneGraphPathFinder(router, janeEdge, janePoint, getPlaceType()); // we could also get a persistent router-scoped GraphPathFinder but there's no setup cost here
+            JaneGraphPathFinder gpFinder = new JaneGraphPathFinder(router, getPlaceType()); // we could also get a persistent router-scoped GraphPathFinder but there's no setup cost here
             List<GraphPath> paths = gpFinder.graphPathFinderEntryPoint(request);
 
             /* Convert the internal GraphPaths to a TripPlan object that is included in an OTP web service Response. */
@@ -121,7 +118,17 @@ public class JanePlanner extends RoutingResource {
         return response;
     }
     
-    private int getPlaceType() {
-    	return category;
+    private int[] getPlaceType() {
+    	int[] type = null;
+    	Iterator<Integer> it = category.iterator();
+    	while (it.hasNext()) {
+    		if (it.next() > 6) it.remove();
+    	}
+    	it = category.iterator();
+    	type = new int[category.size()];
+    	for (int i=0; i<type.length; ++i) {
+    		type[i] = it.next();
+    	}
+    	return type;
     }
 }

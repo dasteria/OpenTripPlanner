@@ -22,7 +22,6 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 
 import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
-import org.opentripplanner.jane.JanePoint;
 import org.opentripplanner.routing.core.Fare;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -100,9 +99,9 @@ public class Itinerary {
     @XmlElement(name = "leg")
     public List<Leg> legs = new ArrayList<Leg>();
     
-    @XmlElementWrapper(name = "intermediatePlaces")
-    @JsonProperty(value="intermediatePlaces")
-    public List<JanePoint> pois = new ArrayList<>();
+    @XmlElementWrapper(name = "edges")
+    @JsonProperty(value="edges")
+    public int[] edges = null;
 
     /**
      * This itinerary has a greater slope than the user requested (but there are no possible 

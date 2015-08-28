@@ -1,21 +1,15 @@
 package org.opentripplanner.jane;
 
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.opentripplanner.common.pqueue.BinHeap;
-import org.opentripplanner.routing.algorithm.AStar;
 import org.opentripplanner.routing.algorithm.TraverseVisitor;
 import org.opentripplanner.routing.algorithm.strategies.RemainingWeightHeuristic;
 import org.opentripplanner.routing.algorithm.strategies.SearchTerminationStrategy;
-import org.opentripplanner.routing.algorithm.strategies.TrivialRemainingWeightHeuristic;
 import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
-import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
@@ -27,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.beust.jcommander.internal.Lists;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Sets;
 
 public class JaneAStar {
@@ -39,10 +31,7 @@ public class JaneAStar {
 	private static final double OVERSEARCH_MULTIPLIER = 4.0;
 
 	private boolean verbose = false;
-	private Map<Integer, JaneEdge> janeEdge;
-	private Map<Integer, JanePoint> janePoint;
-	private int type;
-	private Predicate<JanePoint> predicate;
+	private int[] type;
 
 	private TraverseVisitor traverseVisitor;
 
@@ -77,16 +66,8 @@ public class JaneAStar {
 
 	private RunState runState;
 
-	public JaneAStar(Map<Integer, JaneEdge> janeEdge, Map<Integer, JanePoint> janePoint, int type) {
-		this.janeEdge = janeEdge;
-		this.janePoint = janePoint;
+	public JaneAStar(int[] type) {
 		this.type = type;
-		this.predicate = new Predicate<JanePoint>() {
-			@Override
-			public boolean apply(JanePoint p) {
-				return (p.type & JaneAStar.this.type) != 0;
-			}
-		};
 	}
 
 	/**
@@ -149,7 +130,8 @@ public class JaneAStar {
 
 		if (addToQueue) {
 			State initialState = new State(options);
-			initialState.places = Sets.newIdentityHashSet();
+			initialState.visited = Sets.newIdentityHashSet();
+			initialState.visited.add(initialState.getVertex());
 			runState.spt.add(initialState);
 			runState.pq.insert(initialState, 0);
 		}
@@ -168,26 +150,26 @@ public class JaneAStar {
             // TODO Use this to board multiple trips.
             if ((edge instanceof StreetEdge) && lat == outgoing.getLat() && lng == outgoing.getLon()) {
             	// Disable back track the original location
+            	// System.out.println(outgoing == runState.u.getBackState().getVertex());
             	continue;
             }
             for (State v = edge.traverse(runState.u); v != null; v = v.getNextResult()) {
                 if (traverseVisitor != null) {
                     traverseVisitor.visitEdge(edge, v);
                 }
-                //if (v.getBackMode() == TraverseMode.WALK && lat == outgoing.getLat() && lng == outgoing.getLon()) {
-                	// Disable back track the original location
-                //	continue;
-                //}
+                if (runState.u.visited.contains(v.getVertex())) {
+                	continue;
+                } else {
+                	v.visited = Sets.newIdentityHashSet();
+                	v.visited.addAll(runState.u.visited);
+                	v.visited.add(v.getVertex());
+                }
 				v.quality = runState.u.quality;
-				JaneEdge j = janeEdge.get(edge.getId());
-				if (j != null) {
-					v.places = Sets.difference(Sets.filter(j.points, this.predicate), runState.u.places);
-					for (JanePoint point : v.places) {
-						v.quality += point.score;
+				double[] egdgeQuality = edge.getQuality();
+				if (egdgeQuality != null) {
+					for (int t : this.type) {
+						v.quality += egdgeQuality[t];
 					}
-					v.places = Sets.union(runState.u.places, v.places);
-				} else {
-					v.places = runState.u.places;
 				}
                 // TEST: uncomment to verify that all optimisticTraverse functions are actually
                 // admissible
